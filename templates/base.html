@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ tab_title }}</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Configuración Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#000000",
+                        "zorro-blue": "#0044FF",
+                    },
+                    fontFamily: {
+                        headline: ["Space Grotesk", "sans-serif"],
+                        body: ["Manrope", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Estilos Personalizados -->
+    <style>
+        body {
+            background-color: #fafafa;
+            color: #000000;
+            overflow-x: hidden;
+        }
+
+        /* Fondo Global (Grid Overlay) */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image:
+                linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Letras animadas del Glitch */
+        .char-span {
+            display: inline-block;
+            opacity: 0;
+            transition: color 0.05s ease;
+        }
+
+        /* Estilo de listas con flechas */
+        .apunte-list li::before {
+            content: "→";
+            color: #0044FF;
+            font-weight: bold;
+            display: inline-block;
+            width: 1.5em;
+            margin-left: -1.5em;
+        }
+
+        /* Pill "Ir al video" */
+        .yt-jump {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35em;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            background: rgba(0, 68, 255, 0.08);
+            color: #0044FF;
+            border: 1px solid rgba(0, 68, 255, 0.25);
+            padding: 0.2em 0.65em;
+            border-radius: 9999px;
+            text-decoration: none;
+            margin: 0 0.25em;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .yt-jump:hover {
+            background: #0044FF;
+            color: #ffffff;
+            border-color: #0044FF;
+            transform: translateY(-1px);
+        }
+
+        /* Transición suave para cards */
+        .progress-bar-fill {
+            transition: width 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="font-body antialiased selection:bg-zorro-blue selection:text-white">
+
+    <div class="grid-overlay"></div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main id="main-content" class="relative z-10 max-w-4xl mx-auto px-6 py-16 md:py-24 flex flex-col gap-10">
+
+        <!-- Cabecera -->
+        <header class="mb-6">
+            <a href="https://elzorroazul.studio" target="_blank" rel="noopener" class="inline-block mb-8 transition-opacity hover:opacity-70">
+                <img src="https://elzorroazul.studio/wp-content/uploads/2026/04/logo-sin-fondo.png"
+                     alt="El Zorro Azul"
+                     class="h-10 md:h-12 w-auto" />
+            </a>
+            <p class="font-headline text-xs md:text-sm text-zorro-blue font-bold tracking-[0.2em] mb-4 uppercase">
+                {{ super_label }}
+            </p>
+            <h1 class="glitch-target font-headline text-4xl md:text-6xl font-bold tracking-tighter leading-tight uppercase text-primary" data-text="{{ main_title }}">
+                {{ main_title }}
+            </h1>
+            {% if show_credits %}
+            <p class="font-headline text-lg md:text-xl text-primary/80 mt-4 font-bold uppercase tracking-wider">
+                Clase dictada por {{ taught_by }}
+            </p>
+            {% if reviewed_by %}
+            <p class="font-headline text-xs md:text-sm text-primary/60 mt-2 font-bold uppercase tracking-[0.15em]">
+                Revisión técnica por {{ reviewed_by }}
+            </p>
+            {% endif %}
+            {% endif %}
+        </header>
+
+        <!-- CONTENT SLOT: aquí Jinja2 inyecta los <article> generados por Gemma 4 -->
+        {{ content | safe }}
+
+    </main>
+
+    <!-- MOTOR DE LÓGICA -->
+    <script>
+        // Variables inyectadas desde Jinja2
+        const VIDEO_ID  = "{{ video_id }}";
+        const VIDEO_URL = "{{ video_url }}";
+
+        // 1. Efecto Glitch en headlines
+        function prepareGlitchText(element) {
+            const textToGlitch = element.getAttribute('data-text') || element.textContent.trim();
+            element.innerHTML = '';
+            const spans = [];
+            textToGlitch.split(' ').forEach((word, wordIdx, array) => {
+                const wordContainer = document.createElement('span');
+                wordContainer.className = 'inline-block whitespace-nowrap';
+                [...word].forEach(char => {
+                    const s = document.createElement('span');
+                    s.className = 'char-span';
+                    s.textContent = char;
+                    wordContainer.appendChild(s);
+                    spans.push(s);
+                });
+                element.appendChild(wordContainer);
+                if (wordIdx < array.length - 1) {
+                    element.appendChild(document.createTextNode(' '));
+                }
+            });
+            return spans;
+        }
+
+        function animateGlitch(spans) {
+            spans.forEach(span => {
+                const delay = Math.random() * 300;
+                setTimeout(() => {
+                    let f = 0;
+                    const count = 4 + Math.floor(Math.random() * 8);
+                    const int = setInterval(() => {
+                        span.style.opacity = Math.random() > 0.4 ? '1' : '0.1';
+                        span.style.color = Math.random() > 0.85 ? '#0044FF' : 'inherit';
+                        if (++f >= count) {
+                            clearInterval(int);
+                            span.style.opacity = '1';
+                            span.style.color = 'inherit';
+                        }
+                    }, 40);
+                }, delay);
+            });
+        }
+
+        // 2. Conversión de timecodes [[YT:MM:SS]] en pills "Ir al video"
+        function convertTimecodes() {
+            const main = document.getElementById('main-content');
+            if (!main) return;
+
+            const regex = /\[\[YT:(\d{1,2}):(\d{2})(?::(\d{2}))?\]\]/g;
+
+            const walker = document.createTreeWalker(
+                main,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: node => {
+                        if (!regex.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                        let parent = node.parentNode;
+                        while (parent) {
+                            if (['A','SCRIPT','STYLE','CODE'].includes(parent.tagName)) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            parent = parent.parentNode;
+                        }
+                        regex.lastIndex = 0;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            const nodesToReplace = [];
+            let currentNode;
+            while (currentNode = walker.nextNode()) {
+                nodesToReplace.push(currentNode);
+            }
+
+            nodesToReplace.forEach(textNode => {
+                const text = textNode.nodeValue;
+                regex.lastIndex = 0;
+                const fragment = document.createDocumentFragment();
+                let lastIndex = 0;
+                let match;
+
+                while ((match = regex.exec(text)) !== null) {
+                    if (match.index > lastIndex) {
+                        fragment.appendChild(
+                            document.createTextNode(text.slice(lastIndex, match.index))
+                        );
+                    }
+
+                    const h = match[3] !== undefined ? parseInt(match[1]) : 0;
+                    const m = match[3] !== undefined ? parseInt(match[2]) : parseInt(match[1]);
+                    const s = match[3] !== undefined ? parseInt(match[3]) : parseInt(match[2]);
+                    const totalSeconds = h * 3600 + m * 60 + s;
+
+                    const display = match[3] !== undefined
+                        ? `${match[1]}:${match[2]}:${match[3]}`
+                        : `${match[1]}:${match[2]}`;
+
+                    const link = document.createElement('a');
+                    link.href = `${VIDEO_URL}&t=${totalSeconds}s`;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.className = 'yt-jump';
+                    link.innerHTML = `▶ ${display}`;
+
+                    fragment.appendChild(link);
+                    lastIndex = regex.lastIndex;
+                }
+
+                if (lastIndex < text.length) {
+                    fragment.appendChild(
+                        document.createTextNode(text.slice(lastIndex))
+                    );
+                }
+
+                textNode.parentNode.replaceChild(fragment, textNode);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            convertTimecodes();
+
+            // 3. Soporte para líneas clickeables (Transcripción Interactiva)
+            document.addEventListener('click', (e) => {
+                const clickable = e.target.closest('.clickable-line');
+                if (clickable) {
+                    const jump = clickable.querySelector('.yt-jump');
+                    if (jump && e.target !== jump) {
+                        jump.click();
+                    }
+                }
+            });
+
+            document.querySelectorAll('.glitch-target').forEach(t => {
+                new IntersectionObserver((entries) => {
+                    entries.forEach(e => {
+                        if (e.isIntersecting && !t.dataset.animated) {
+                            animateGlitch(prepareGlitchText(t));
+                            t.dataset.animated = "true";
+                        }
+                    });
+                }).observe(t);
+            });
+        });
+    </script>
+</body>
+</html>

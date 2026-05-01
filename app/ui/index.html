@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zorro Azul — Transcriptor de Clases</title>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: "#000000", "zorro-blue": "#0044FF" },
+                    fontFamily: { headline: ["Space Grotesk", "sans-serif"], body: ["Manrope", "sans-serif"], mono: ["JetBrains Mono", "monospace"] }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        body { background-color: #050505; color: #e5e5e5; }
+        .bg-card { background-color: #111111; border: 1px solid rgba(255,255,255,0.05); }
+        .tab-active { border-bottom: 2px solid #0044FF; color: #0044FF; }
+        .CodeMirror { height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #0a0a0a !important; color: #e5e5e5 !important; }
+        .CodeMirror-gutters { background: #0a0a0a !important; border-right: 1px solid #222 !important; }
+        .gradient-shift {
+            background: linear-gradient(90deg, #0044FF, #ffffff, #0044FF);
+            background-size: 200% 100%;
+            animation: shift 3s linear infinite;
+        }
+        @keyframes shift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        
+        input, textarea, select { background-color: #1a1a1a !important; color: #fff !important; border: 1px solid #333 !important; }
+        input:focus, textarea:focus { border-color: #0044FF !important; outline: none; }
+    </style>
+</head>
+<body class="font-body antialiased text-gray-200" x-data="app()" x-init="init()">
+    <nav class="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <img src="https://elzorroazul.studio/wp-content/uploads/2026/04/logo-sin-fondo.png" alt="Zorro Azul" class="h-8">
+            <h1 class="font-headline font-bold text-lg uppercase tracking-tight">Transcriptor</h1>
+        </div>
+        <div class="flex gap-8">
+            <template x-for="tab in tabs" :key="tab.id">
+                <button @click="activeTab = tab.id"
+                    class="font-headline text-xs font-bold uppercase tracking-widest pb-1 transition-all"
+                    :class="activeTab === tab.id ? 'tab-active' : 'text-white/40 hover:text-white/60'"
+                    x-text="tab.label"></button>
+            </template>
+        </div>
+        <button @click="showConfig = true" class="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-8">
+        <div x-show="activeTab === 'inicio'" class="space-y-8" x-cloak>
+            <div class="bg-card p-12 rounded-2xl shadow-sm text-center flex flex-col items-center gap-6">
+                <h2 class="font-headline text-3xl font-bold uppercase">Pegá el link de YouTube</h2>
+                <div class="flex w-full max-w-2xl border border-white/10 rounded-full overflow-hidden focus-within:border-zorro-blue transition-all bg-black/20">
+                    <input type="text" x-model="ytUrl" placeholder="Link de YouTube (Requerido para referencias)" class="flex-1 px-8 py-4 outline-none text-lg bg-transparent border-none">
+                    <button @click="analyzeVideo()" :disabled="loading || (!ytUrl && !localFile)" class="bg-zorro-blue text-white px-8 py-4 font-headline font-bold uppercase hover:bg-white hover:text-black transition-all disabled:opacity-50 text-xs tracking-widest">Analizar</button>
+                </div>
+
+                <div class="flex flex-col items-center gap-2 w-full max-w-2xl">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-white/30">Opcional: Cargar video local (para ahorrar descarga)</p>
+                    <label class="w-full flex flex-col items-center px-4 py-6 bg-white/5 text-white/60 rounded-2xl border-2 border-dashed border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        <span class="text-xs font-bold uppercase tracking-widest" x-text="localFile ? localFile.name : 'Seleccionar Video o Audio'"></span>
+                        <input type="file" class="hidden" @change="localFile = $event.target.files[0]">
+                    </label>
+                    <template x-if="localFile">
+                        <button @click="localFile = null" class="text-[10px] font-bold uppercase tracking-widest text-red-400 hover:underline">Quitar archivo</button>
+                    </template>
+                </div>
+            </div>
+            <template x-if="videoInfo">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-card p-8 rounded-2xl">
+                    <img :src="videoInfo.thumbnail" class="rounded-xl shadow-lg aspect-video object-cover w-full opacity-80">
+                    <div class="space-y-6">
+                        <h3 class="font-headline text-2xl font-bold uppercase" x-text="videoInfo.title"></h3>
+                        <div class="flex gap-12">
+                            <div><p class="text-xs font-bold text-white/40 uppercase tracking-widest">Duración</p><p class="text-xl font-bold text-white" x-text="formatDuration(videoInfo.duration)"></p></div>
+                            <div><p class="text-xs font-bold text-white/40 uppercase tracking-widest">Estimación</p><p class="text-xl font-bold text-white" x-text="estimation"></p></div>
+                        </div>
+                        <button @click="startTranscription()" class="w-full bg-zorro-blue text-white py-4 rounded-xl font-headline font-bold uppercase tracking-widest shadow-xl hover:bg-white hover:text-black transition-all">Comenzar Transcripción</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="activeTab === 'transcripcion'" class="h-[calc(100vh-200px)] flex flex-col gap-6" x-cloak x-data="{ showPrompt: false }">
+            <div class="flex justify-between items-center">
+                <h2 class="font-headline text-2xl font-bold uppercase">Transcripción</h2>
+                <div class="flex gap-4">
+                    <button @click="showPrompt = !showPrompt" class="border border-white/20 text-white/60 px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all">Refinar Prompt</button>
+                    <button @click="formatWithGemma()" :disabled="!transcriptionText || formatting" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Dar Formato con Gemma</button>
+                </div>
+            </div>
+            
+            <!-- Quick Prompt Editor -->
+            <div x-show="showPrompt" x-collapse class="bg-card p-6 rounded-2xl border border-zorro-blue/30 space-y-4">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-zorro-blue">Instrucciones para la IA (Podés editarlas antes de darle formato)</p>
+                <textarea x-model="promptText" @input.debounce.500ms="savePrompt()" class="w-full h-40 bg-black/40 p-4 font-mono text-xs rounded-xl outline-none resize-none border border-white/10 focus:border-zorro-blue"></textarea>
+            </div>
+
+            <div class="flex-1 bg-card rounded-2xl overflow-hidden shadow-sm relative">
+                <textarea x-model="transcriptionText" class="w-full h-full p-8 font-mono text-sm leading-relaxed outline-none resize-none bg-transparent"></textarea>
+                <div x-show="transcribing" class="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-12" x-cloak>
+                    <div class="w-full max-w-md h-2 bg-white/5 rounded-full overflow-hidden mb-6"><div class="h-full gradient-shift transition-all" :style="`width: ${progress}%`"></div></div>
+                    <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
+                </div>
+                <div x-show="formatting" class="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-12" x-cloak>
+                    <div class="w-full max-w-md flex flex-col items-center gap-6">
+                        <div class="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full gradient-shift transition-all duration-500" :style="`width: ${progress}%`"></div>
+                        </div>
+                        <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
+                        <p class="text-[10px] text-white/40 uppercase tracking-widest">(Esto puede tardar unos minutos si la clase es larga)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+               <div x-show="activeTab === 'formato'" class="h-[calc(100vh-200px)] flex flex-col gap-6" x-cloak>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-8">
+                    <h2 class="font-headline text-2xl font-bold uppercase tracking-tight">Resultado Final</h2>
+                    <div class="flex bg-white/5 p-1 rounded-lg">
+                        <button @click="switchFormatSubTab('apuntes')" class="px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest" :class="formatSubTab === 'apuntes' ? 'bg-white/10 text-zorro-blue' : 'text-white/40'">Apuntes</button>
+                        <button @click="switchFormatSubTab('transcripcion')" class="px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest" :class="formatSubTab === 'transcripcion' ? 'bg-white/10 text-zorro-blue' : 'text-white/40'">Transcripción</button>
+                    </div>
+                </div>
+                <button @click="activeTab = 'publicar'" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all">Publicar</button>
+            </div>
+            <div class="flex-1 grid grid-cols-2 gap-6">
+                <div class="bg-card rounded-2xl overflow-hidden flex flex-col">
+                    <div id="editor-container" class="flex-1"></div>
+                </div>
+                <div class="bg-white rounded-2xl overflow-hidden">
+                    <iframe :srcdoc="previewHtml" class="w-full h-full border-none"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Publicar -->
+        <div x-show="activeTab === 'publicar'" class="max-w-4xl mx-auto space-y-6 pb-20" x-cloak>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-card p-6 rounded-2xl space-y-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs">1</div>
+                        <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Nomenclatura</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Prefijo Curso</label><input type="text" x-model="courseSlug" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border-none"></div>
+                        <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Número Clase</label><input type="number" x-model="claseNum" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border-none"></div>
+                        <div class="pt-2 space-y-3 border-t border-white/5">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" x-model="config.show_credits" class="w-4 h-4 rounded border-white/10 bg-white/5 text-zorro-blue focus:ring-zorro-blue">
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-white/60">Mostrar 'Clase dictada por...'</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARTE 2: TRANSCRIPCIÓN -->
+                <div class="bg-card p-6 rounded-2xl space-y-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-zorro-blue text-white flex items-center justify-center font-bold text-xs">2</div>
+                        <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Transcripción</h3>
+                    </div>
+                    <p class="text-[10px] text-white/30 leading-relaxed uppercase font-bold tracking-tighter">Versión cruda con buscador y marcas de tiempo ocultas (hover).</p>
+                    <div class="space-y-2 pt-4">
+                        <button @click="saveLocal('transcripcion')" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all">Descargar HTML</button>
+                        <button @click="publishToWordpress('transcripcion')" :disabled="publishing" class="w-full bg-white text-black py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-zorro-blue hover:text-white transition-all disabled:opacity-50">Subir a WP</button>
+                    </div>
+                    <p class="text-[9px] font-mono text-center opacity-40" x-text="`${courseSlug}_Clase${claseNum}.html`"></p>
+                </div>
+
+                <!-- PARTE 3: APUNTES -->
+                <div class="bg-card p-6 rounded-2xl space-y-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-zorro-blue text-white flex items-center justify-center font-bold text-xs">3</div>
+                        <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Apuntes (IA)</h3>
+                    </div>
+                    <p class="text-[10px] text-white/30 leading-relaxed uppercase font-bold tracking-tighter">Versión procesada por Gemma 4 con estructura y formato académico.</p>
+                    <div class="space-y-2 pt-4">
+                        <button @click="saveLocal('apuntes')" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all">Descargar HTML</button>
+                        <button @click="publishToWordpress('apuntes')" :disabled="publishing" class="w-full bg-zorro-blue text-white py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Subir a WP</button>
+                    </div>
+                    <p class="text-[9px] font-mono text-center opacity-40" x-text="`${courseSlug}_Clase${claseNum}_Apuntes.html`"></p>
+                </div>
+            </div>
+        </div>
+   </div>
+    </main>
+
+    <!-- Modal de Configuración -->
+    <div x-show="showConfig" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+        <div class="bg-card w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-white/10">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                <div class="flex gap-4">
+                    <button @click="configTab = 'wp'" class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all" :class="configTab === 'wp' ? 'bg-white text-black shadow-sm' : 'text-white/40'">WordPress</button>
+                    <button @click="configTab = 'prompt'" class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all" :class="configTab === 'prompt' ? 'bg-white text-black shadow-sm' : 'text-white/40'">Prompt (IA)</button>
+                    <button @click="configTab = 'modelo'" class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all" :class="configTab === 'modelo' ? 'bg-white text-black shadow-sm' : 'text-white/40'">Modelo</button>
+                </div>
+                <button @click="showConfig = false" class="text-white/40 hover:text-white transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <!-- Tab: WordPress -->
+                <div x-show="configTab === 'wp'" class="space-y-6">
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">URL de WordPress</label><input type="text" x-model="config.wp_url" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border border-transparent focus:border-zorro-blue outline-none transition-all"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Usuario</label><input type="text" x-model="config.wp_user" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold"></div>
+                            <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Password de Aplicación</label><input type="password" x-model="config.wp_app_password" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold"></div>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/5 pt-6 space-y-6">
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-white/30">Valores por Defecto</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Dictada por</label><input type="text" x-model="config.default_taught_by" class="w-full px-4 py-3 bg-white/5 rounded-xl"></div>
+                            <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Revisión por</label><input type="text" x-model="config.default_reviewed_by" class="w-full px-4 py-3 bg-white/5 rounded-xl"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Prompt -->
+                <div x-show="configTab === 'prompt'" class="h-[400px] flex flex-col gap-4">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-white/30">Instrucciones para la IA</p>
+                    <div class="flex-1 bg-black/40 rounded-2xl overflow-hidden border border-white/10">
+                        <textarea x-model="promptText" class="w-full h-full p-6 font-mono text-xs outline-none bg-transparent resize-none leading-relaxed text-white/80"></textarea>
+                    </div>
+                </div>
+
+                <!-- Tab: Modelo -->
+                <div x-show="configTab === 'modelo'" class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Nombre del Modelo en Ollama</label>
+                        <input type="text" x-model="config.model_name" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border border-transparent focus:border-zorro-blue outline-none transition-all">
+                        <p class="text-[10px] text-white/30 italic mt-2">Por defecto: gemma4:latest. Asegurate de que esté en 'ollama list'.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-white/5 border-t border-white/5 flex justify-end gap-4">
+                <button @click="saveConfig()" class="bg-zorro-blue text-white px-8 py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest shadow-lg hover:bg-white hover:text-black transition-all">Guardar Configuración</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>

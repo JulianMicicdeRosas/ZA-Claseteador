@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+workspace/
+*.mp4
+*.mp3
+*.wav
+*.m4a
+.env

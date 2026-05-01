@@ -1,0 +1,20 @@
+[project]
+name = "zorroazul-transcriptor"
+version = "0.1.0"
+description = "App de transcripción y publicación de clases — El Zorro Azul"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "faster-whisper",
+    "yt-dlp",
+    "jinja2",
+    "cryptography",
+    "python-multipart",
+    "aiohttp",
+    "pydantic",
+    "python-dotenv",
+    "pytubefix"
+]
+
+[tool.uv]
+managed = true
