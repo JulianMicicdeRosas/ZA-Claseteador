@@ -212,38 +212,49 @@ function app() {
 
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = '';
 
-                while (true) {
+                const processLine = async (line) => {
+                    if (!line.startsWith('data: ')) return false;
+                    try {
+                        const data = JSON.parse(line.substring(6));
+                        if (data.status === 'error') {
+                            alert(data.detail);
+                            this.formatting = false;
+                            return true;
+                        }
+                        if (data.status === 'completado') {
+                            this.articlesHtml = data.articles_html;
+                            this.generateTranscriptionHtml();
+                            this.activeTab = 'formato';
+                            this.formatSubTab = 'apuntes';
+                            await this.renderPreview();
+                            this.initEditors();
+                            this.formatting = false;
+                            return true;
+                        }
+                        if (data.status) this.statusText = data.status.toUpperCase();
+                        if (data.progress !== undefined) this.progress = data.progress;
+                    } catch (e) {}
+                    return false;
+                };
+
+                outer: while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // retain incomplete trailing line
+
                     for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.substring(6));
-                                if (data.status === 'error') {
-                                    alert(data.detail);
-                                    this.formatting = false;
-                                    return;
-                                }
-                                if (data.status === 'completado') {
-                                    this.articlesHtml = data.articles_html;
-                                    this.generateTranscriptionHtml();
-                                    this.activeTab = 'formato';
-                                    this.formatSubTab = 'apuntes';
-                                    await this.renderPreview();
-                                    this.initEditors();
-                                    this.formatting = false;
-                                    return;
-                                }
-                                if (data.status) this.statusText = data.status.toUpperCase();
-                                if (data.progress !== undefined) this.progress = data.progress;
-                            } catch (e) {}
-                        }
+                        if (await processLine(line)) break outer;
                     }
                 }
+
+                // Flush any remaining buffered content after stream ends
+                if (buffer) await processLine(buffer);
+
             } catch (e) {
                 alert("Error en Gemma: " + e.message);
                 this.formatting = false;
