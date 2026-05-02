@@ -34,7 +34,7 @@ function app() {
             default_taught_by: '',
             default_reviewed_by: '',
             default_super_label: 'CAPACITACIÓN MODELADO 3D + IA + ENTORNOS INMERSIVOS',
-            model_name: 'gemma4:latest',
+            model_name: 'qwen2.5:0.5b',
             show_credits: true
         },
         promptText: '',
@@ -343,10 +343,9 @@ function app() {
 
         generateTranscriptionHtml() {
             const lines = this.transcriptionText.split('\n');
-            let html = '<article class="bg-white/70 backdrop-blur-xl border border-black/10 shadow-xl rounded-sm p-6 md:p-10 border-l-4 border-l-black transition-all hover:bg-white/90 mb-8">';
-            html += '<div class="bg-black/5 p-4 rounded-lg mb-6 text-[10px] font-bold uppercase tracking-widest text-black/60 italic">Podés detener el mouse en cualquier frase para ver en qué momento del video está. Si cliqueás en una palabra, te lleva directamente al momento.</div>';
-            html += '<h2 class="font-headline text-xl font-bold text-primary uppercase tracking-wide mb-6">Transcripción Completa</h2>';
-            html += '<div class="space-y-1 font-mono text-[11px] leading-relaxed">';
+            let html = '<article class="bg-white/70 backdrop-blur-xl border border-black/10 shadow-xl rounded-sm p-6 md:p-10 border-l-4 border-l-zorro-blue transition-all hover:bg-white/90">';
+            html += '<h2 class="glitch-target font-headline text-xl md:text-2xl font-bold text-primary uppercase tracking-wide mb-6">Transcripción Completa</h2>';
+            html += '<div class="space-y-2 text-primary/80 font-medium leading-relaxed">';
 
             lines.forEach(line => {
                 if (!line.trim()) return;
@@ -354,13 +353,9 @@ function app() {
                 if (match) {
                     const time = match[1];
                     const text = match[2];
-                    html += `<div class="group inline hover:bg-zorro-blue/10 p-0.5 rounded transition-all clickable-line cursor-pointer"
-                        title="Ir al minuto ${time} del video en YouTube">
-                        <span class="hidden yt-jump">[[YT:${time}]]</span>
-                        <span class="text-black/60 group-hover:text-black">${text}</span>
-                    </div> `;
+                    html += `<p class="clickable-line cursor-pointer hover:bg-black/5 p-2 rounded-lg transition-all group">[[YT:${time}]] <span class="group-hover:text-zorro-blue transition-colors">${text}</span></p>`;
                 } else {
-                    html += `<div class="text-black/40">${line}</div>`;
+                    html += `<p class="text-black/40 text-sm px-2">${line}</p>`;
                 }
             });
 
