@@ -122,6 +122,15 @@
                     <div class="w-full max-w-md h-2 bg-white/5 rounded-full overflow-hidden mb-6"><div class="h-full gradient-shift transition-all" :style="`width: ${progress}%`"></div></div>
                     <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
                 </div>
+                <div x-show="formatting" class="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-12" x-cloak>
+                    <div class="w-full max-w-md flex flex-col items-center gap-6">
+                        <div class="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full gradient-shift transition-all duration-500" :style="`width: ${progress}%`"></div>
+                        </div>
+                        <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
+                        <p class="text-[10px] text-white/40 uppercase tracking-widest">(Esto puede tardar varios minutos si la clase es larga)</p>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -18,6 +18,7 @@ function app() {
         transcriptionText: '',
         formatting: false,
         codeChanged: false,
+        articlesHtml: '',
         transcriptionHtml: '',
         previewHtml: '',
         claseNum: 1,
@@ -210,10 +211,67 @@ function app() {
         },
 
         async formatWithGemma() {
-            this.generateTranscriptionHtml();
-            this.activeTab = 'formato';
-            await this.renderPreview();
-            this.initEditors();
+            this.formatting = true;
+            this.progress = 0;
+            this.statusText = 'Iniciando formateo...';
+
+            try {
+                const resp = await fetch('/api/format', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transcription: this.transcriptionText,
+                        model_name: this.config.model_name
+                    })
+                });
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                const processLine = async (line) => {
+                    if (!line.startsWith('data: ')) return false;
+                    try {
+                        const data = JSON.parse(line.substring(6));
+                        if (data.status === 'error') {
+                            alert(data.detail);
+                            this.formatting = false;
+                            return true;
+                        }
+                        if (data.status === 'completado') {
+                            this.articlesHtml = data.articles_html;
+                            this.generateTranscriptionHtml();
+                            this.activeTab = 'formato';
+                            await this.renderPreview();
+                            this.initEditors();
+                            this.formatting = false;
+                            return true;
+                        }
+                        if (data.status) this.statusText = data.status.toUpperCase();
+                        if (data.progress !== undefined) this.progress = data.progress;
+                    } catch (e) {}
+                    return false;
+                };
+
+                outer: while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (await processLine(line)) break outer;
+                    }
+                }
+
+                if (buffer) await processLine(buffer);
+
+            } catch (e) {
+                alert("Error en Gemma: " + e.message);
+                this.formatting = false;
+            }
         },
 
         downloadTxt() {
@@ -230,14 +288,14 @@ function app() {
 
         async applyCodeChanges() {
             if (this.editors.articles) {
-                this.transcriptionHtml = this.editors.articles.getValue();
+                this.articlesHtml = this.editors.articles.getValue();
             }
             await this.renderPreview();
             this.codeChanged = false;
         },
 
         async renderPreview() {
-            let content = this.transcriptionHtml;
+            let content = this.articlesHtml;
             if (this.editors.articles) content = this.editors.articles.getValue();
 
             try {
@@ -265,7 +323,7 @@ function app() {
             this.$nextTick(() => {
                 if (this.activeTab === 'formato') {
                     const el = document.getElementById('editor-container');
-                    const val = this.transcriptionHtml;
+                    const val = this.articlesHtml;
                     if (el && !this.editors.articles) {
                         this.editors.articles = CodeMirror(el, {
                             value: val,
@@ -360,7 +418,7 @@ function app() {
         },
 
         async renderHtmlForType() {
-            let content = this.transcriptionHtml;
+            let content = this.articlesHtml;
             if (this.editors.articles) content = this.editors.articles.getValue();
             const resp = await fetch('/api/render-preview', {
                 method: 'POST',
