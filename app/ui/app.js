@@ -3,7 +3,7 @@ function app() {
         activeTab: 'inicio',
         tabs: [
             { id: 'inicio', label: 'Inicio' },
-            { id: 'transcripcion', label: 'Transcripción' },
+            { id: 'transcripcion', label: 'Apuntes' },
             { id: 'formato', label: 'Formato' },
             { id: 'publicar', label: 'Publicar' }
         ],
@@ -17,13 +17,11 @@ function app() {
         statusText: '',
         transcriptionText: '',
         formatting: false,
-        formatSubTab: 'apuntes',
+        codeChanged: false,
         transcriptionHtml: '',
-        articlesHtml: '',
         previewHtml: '',
         claseNum: 1,
         courseSlug: 'IA',
-        filenameStyle: 'simple', // 'simple' or 'apuntes'
         taughtBy: '',
         reviewedBy: '',
         showConfig: false,
@@ -42,7 +40,7 @@ function app() {
         systemStatus: {},
         publishing: false,
         publishUrl: '',
-        
+
         editors: {},
 
         async init() {
@@ -81,25 +79,31 @@ function app() {
 
         async saveConfig() {
             try {
-                // Save general config
                 await fetch('/api/config', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(this.config)
                 });
-                
-                // Save prompt
                 await fetch('/api/prompt', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: this.promptText })
                 });
-
                 alert("Configuración guardada correctamente");
                 this.showConfig = false;
             } catch (e) {
                 alert("Error al guardar configuración");
             }
+        },
+
+        async savePrompt() {
+            try {
+                await fetch('/api/prompt', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: this.promptText })
+                });
+            } catch (e) {}
         },
 
         async analyzeVideo() {
@@ -121,7 +125,7 @@ function app() {
                     throw new Error(err.detail || "Video no encontrado");
                 }
                 this.videoInfo = await resp.json();
-                
+
                 const estResp = await fetch('/api/estimate-time', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -161,7 +165,7 @@ function app() {
             const response = await fetch('/api/transcribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     video_id: this.videoInfo.video_id,
                     local_file: localFileName
                 })
@@ -195,82 +199,47 @@ function app() {
             }
         },
 
-        async formatWithGemma() {
-            this.formatting = true;
-            this.progress = 0;
-            this.statusText = 'Iniciando formateo...';
-            
-            try {
-                const resp = await fetch('/api/format', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        transcription: this.transcriptionText,
-                        model_name: this.config.model_name
-                    })
-                });
-
-                const reader = resp.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                const processLine = async (line) => {
-                    if (!line.startsWith('data: ')) return false;
-                    try {
-                        const data = JSON.parse(line.substring(6));
-                        if (data.status === 'error') {
-                            alert(data.detail);
-                            this.formatting = false;
-                            return true;
-                        }
-                        if (data.status === 'completado') {
-                            this.articlesHtml = data.articles_html;
-                            this.generateTranscriptionHtml();
-                            this.activeTab = 'formato';
-                            this.formatSubTab = 'apuntes';
-                            await this.renderPreview();
-                            this.initEditors();
-                            this.formatting = false;
-                            return true;
-                        }
-                        if (data.status) this.statusText = data.status.toUpperCase();
-                        if (data.progress !== undefined) this.progress = data.progress;
-                    } catch (e) {}
-                    return false;
-                };
-
-                outer: while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop(); // retain incomplete trailing line
-
-                    for (const line of lines) {
-                        if (await processLine(line)) break outer;
-                    }
-                }
-
-                // Flush any remaining buffered content after stream ends
-                if (buffer) await processLine(buffer);
-
-            } catch (e) {
-                alert("Error en Gemma: " + e.message);
-                this.formatting = false;
-            }
+        // Estimate how long formatting would take based on word count (2 min per 2500-word chunk)
+        estimateFormatTime() {
+            if (!this.transcriptionText) return '';
+            const words = this.transcriptionText.split(/\s+/).filter(w => w).length;
+            if (words === 0) return '';
+            const chunks = Math.ceil(words / 2500);
+            const mins = Math.max(1, chunks * 2);
+            return `~${mins} min · ${words.toLocaleString()} palabras`;
         },
 
-        switchFormatSubTab(tab) {
-            this.formatSubTab = tab;
-            this.renderPreview();
+        async formatWithGemma() {
+            this.generateTranscriptionHtml();
+            this.activeTab = 'formato';
+            await this.renderPreview();
             this.initEditors();
         },
 
+        downloadTxt() {
+            const blob = new Blob([this.transcriptionText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${this.courseSlug}_Clase${this.claseNum}_transcripcion.txt`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        },
+
+        async applyCodeChanges() {
+            if (this.editors.articles) {
+                this.transcriptionHtml = this.editors.articles.getValue();
+            }
+            await this.renderPreview();
+            this.codeChanged = false;
+        },
+
         async renderPreview() {
-            let content = this.formatSubTab === 'apuntes' ? this.articlesHtml : this.transcriptionHtml;
+            let content = this.transcriptionHtml;
             if (this.editors.articles) content = this.editors.articles.getValue();
-            
+
             try {
                 const resp = await fetch('/api/render-preview', {
                     method: 'POST',
@@ -296,7 +265,7 @@ function app() {
             this.$nextTick(() => {
                 if (this.activeTab === 'formato') {
                     const el = document.getElementById('editor-container');
-                    const val = this.formatSubTab === 'apuntes' ? this.articlesHtml : this.transcriptionHtml;
+                    const val = this.transcriptionHtml;
                     if (el && !this.editors.articles) {
                         this.editors.articles = CodeMirror(el, {
                             value: val,
@@ -304,9 +273,11 @@ function app() {
                             lineNumbers: true,
                             lineWrapping: true
                         });
+                        this.editors.articles.on('change', () => { this.codeChanged = true; });
                     } else if (this.editors.articles) {
                         this.editors.articles.setValue(val);
                         this.editors.articles.refresh();
+                        this.codeChanged = false;
                     }
                 }
             });
@@ -318,14 +289,14 @@ function app() {
             html += '<div class="bg-black/5 p-4 rounded-lg mb-6 text-[10px] font-bold uppercase tracking-widest text-black/60 italic">Podés detener el mouse en cualquier frase para ver en qué momento del video está. Si cliqueás en una palabra, te lleva directamente al momento.</div>';
             html += '<h2 class="font-headline text-xl font-bold text-primary uppercase tracking-wide mb-6">Transcripción Completa</h2>';
             html += '<div class="space-y-1 font-mono text-[11px] leading-relaxed">';
-            
+
             lines.forEach(line => {
                 if (!line.trim()) return;
                 const match = line.match(/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(.*)/);
                 if (match) {
                     const time = match[1];
                     const text = match[2];
-                    html += `<div class="group inline hover:bg-zorro-blue/10 p-0.5 rounded transition-all clickable-line cursor-pointer" 
+                    html += `<div class="group inline hover:bg-zorro-blue/10 p-0.5 rounded transition-all clickable-line cursor-pointer"
                         title="Ir al minuto ${time} del video en YouTube">
                         <span class="hidden yt-jump">[[YT:${time}]]</span>
                         <span class="text-black/60 group-hover:text-black">${text}</span>
@@ -334,18 +305,14 @@ function app() {
                     html += `<div class="text-black/40">${line}</div>`;
                 }
             });
-            
+
             html += '</div></article>';
             this.transcriptionHtml = html;
         },
 
-        async saveLocal(type = 'apuntes') {
-            const suffix = type === 'apuntes' ? '_Apuntes' : '';
-            const filename = `${this.courseSlug}_Clase${this.claseNum}${suffix}.html`;
-            
-            // Re-render the specific type before downloading
-            const htmlToSave = await this.renderHtmlForType(type);
-            
+        async saveLocal() {
+            const filename = `${this.courseSlug}_Clase${this.claseNum}.html`;
+            const htmlToSave = await this.renderHtmlForType();
             const blob = new Blob([htmlToSave], { type: 'text/html' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -357,14 +324,12 @@ function app() {
             document.body.removeChild(a);
         },
 
-        async publishToWordpress(type = 'apuntes') {
+        async publishToWordpress() {
             this.publishing = true;
             try {
-                const suffix = type === 'apuntes' ? '_Apuntes' : '';
-                const filename = `${this.courseSlug}_Clase${this.claseNum}${suffix}.html`;
-                
-                const htmlToPublish = await this.renderHtmlForType(type);
-                
+                const filename = `${this.courseSlug}_Clase${this.claseNum}.html`;
+                const htmlToPublish = await this.renderHtmlForType();
+
                 const resp = await fetch('/api/publish-wordpress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -378,12 +343,12 @@ function app() {
                         }
                     })
                 });
-                
+
                 if (!resp.ok) {
                     const err = await resp.json();
                     throw new Error(err.detail || "Error al publicar");
                 }
-                
+
                 const data = await resp.json();
                 this.publishUrl = data.url;
                 alert(`¡Publicado con éxito!\nURL: ${data.url}`);
@@ -394,8 +359,9 @@ function app() {
             }
         },
 
-        async renderHtmlForType(type) {
-            const content = type === 'apuntes' ? this.articlesHtml : this.transcriptionHtml;
+        async renderHtmlForType() {
+            let content = this.transcriptionHtml;
+            if (this.editors.articles) content = this.editors.articles.getValue();
             const resp = await fetch('/api/render-preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

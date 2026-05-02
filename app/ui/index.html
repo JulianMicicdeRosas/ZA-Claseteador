@@ -36,7 +36,7 @@
             animation: shift 3s linear infinite;
         }
         @keyframes shift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-        
+
         input, textarea, select { background-color: #1a1a1a !important; color: #fff !important; border: 1px solid #333 !important; }
         input:focus, textarea:focus { border-color: #0044FF !important; outline: none; }
     </style>
@@ -59,6 +59,8 @@
     </nav>
 
     <main class="max-w-6xl mx-auto p-8">
+
+        <!-- INICIO -->
         <div x-show="activeTab === 'inicio'" class="space-y-8" x-cloak>
             <div class="bg-card p-12 rounded-2xl shadow-sm text-center flex flex-col items-center gap-6">
                 <h2 class="font-headline text-3xl font-bold uppercase">Pegá el link de YouTube</h2>
@@ -94,17 +96,22 @@
             </template>
         </div>
 
+        <!-- APUNTES (antes: Transcripción) -->
         <div x-show="activeTab === 'transcripcion'" class="h-[calc(100vh-200px)] flex flex-col gap-6" x-cloak x-data="{ showPrompt: false }">
-            <div class="flex justify-between items-center">
-                <h2 class="font-headline text-2xl font-bold uppercase">Transcripción</h2>
-                <div class="flex gap-4">
-                    <button @click="showPrompt = !showPrompt" class="border border-white/20 text-white/60 px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all">Refinar Prompt</button>
-                    <button @click="formatWithGemma()" :disabled="!transcriptionText || formatting" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Dar Formato con Gemma</button>
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <h2 class="font-headline text-2xl font-bold uppercase">Apuntes</h2>
+                <div class="flex gap-3 items-center flex-wrap">
+                    <template x-if="transcriptionText">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-white/30" x-text="estimateFormatTime()"></span>
+                    </template>
+                    <button @click="downloadTxt()" :disabled="!transcriptionText" class="border border-white/20 text-white/60 px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all disabled:opacity-50">Descargar TXT</button>
+                    <button @click="showPrompt = !showPrompt" class="border border-white/20 text-white/60 px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all">Refinar Prompt</button>
+                    <button @click="formatWithGemma()" :disabled="!transcriptionText" class="bg-zorro-blue text-white px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Dar Formato</button>
                 </div>
             </div>
-            
+
             <!-- Quick Prompt Editor -->
-            <div x-show="showPrompt" x-collapse class="bg-card p-6 rounded-2xl border border-zorro-blue/30 space-y-4">
+            <div x-show="showPrompt" class="bg-card p-6 rounded-2xl border border-zorro-blue/30 space-y-4">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-zorro-blue">Instrucciones para la IA (Podés editarlas antes de darle formato)</p>
                 <textarea x-model="promptText" @input.debounce.500ms="savePrompt()" class="w-full h-40 bg-black/40 p-4 font-mono text-xs rounded-xl outline-none resize-none border border-white/10 focus:border-zorro-blue"></textarea>
             </div>
@@ -115,50 +122,53 @@
                     <div class="w-full max-w-md h-2 bg-white/5 rounded-full overflow-hidden mb-6"><div class="h-full gradient-shift transition-all" :style="`width: ${progress}%`"></div></div>
                     <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
                 </div>
-                <div x-show="formatting" class="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-12" x-cloak>
-                    <div class="w-full max-w-md flex flex-col items-center gap-6">
-                        <div class="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full gradient-shift transition-all duration-500" :style="`width: ${progress}%`"></div>
-                        </div>
-                        <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
-                        <p class="text-[10px] text-white/40 uppercase tracking-widest">(Esto puede tardar unos minutos si la clase es larga)</p>
-                    </div>
-                </div>
             </div>
         </div>
 
-               <div x-show="activeTab === 'formato'" class="h-[calc(100vh-200px)] flex flex-col gap-6" x-cloak>
+        <!-- RESULTADO FINAL -->
+        <div x-show="activeTab === 'formato'" class="flex flex-col gap-6 pb-8" x-cloak>
             <div class="flex justify-between items-center">
-                <div class="flex items-center gap-8">
-                    <h2 class="font-headline text-2xl font-bold uppercase tracking-tight">Resultado Final</h2>
-                    <div class="flex bg-white/5 p-1 rounded-lg">
-                        <button @click="switchFormatSubTab('apuntes')" class="px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest" :class="formatSubTab === 'apuntes' ? 'bg-white/10 text-zorro-blue' : 'text-white/40'">Apuntes</button>
-                        <button @click="switchFormatSubTab('transcripcion')" class="px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest" :class="formatSubTab === 'transcripcion' ? 'bg-white/10 text-zorro-blue' : 'text-white/40'">Transcripción</button>
-                    </div>
-                </div>
+                <h2 class="font-headline text-2xl font-bold uppercase tracking-tight">Resultado Final</h2>
                 <button @click="activeTab = 'publicar'" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all">Publicar</button>
             </div>
-            <div class="flex-1 grid grid-cols-2 gap-6">
-                <div class="bg-card rounded-2xl overflow-hidden flex flex-col">
-                    <div id="editor-container" class="flex-1"></div>
+
+            <!-- Preview centrado -->
+            <div class="bg-white rounded-2xl overflow-hidden shadow-lg w-full" style="height: 65vh">
+                <iframe :srcdoc="previewHtml" class="w-full h-full border-none"></iframe>
+            </div>
+
+            <!-- Editor de código debajo -->
+            <div class="bg-card rounded-2xl overflow-hidden flex flex-col">
+                <div class="flex justify-between items-center px-5 py-3 border-b border-white/5">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-white/30">Código HTML</span>
+                    <button x-show="codeChanged" @click="applyCodeChanges()"
+                        class="bg-zorro-blue text-white px-5 py-1.5 rounded-lg font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-all">
+                        Modificar
+                    </button>
                 </div>
-                <div class="bg-white rounded-2xl overflow-hidden">
-                    <iframe :srcdoc="previewHtml" class="w-full h-full border-none"></iframe>
-                </div>
+                <div id="editor-container" style="height: 420px; overflow: auto;"></div>
             </div>
         </div>
 
-        <!-- Publicar -->
+        <!-- PUBLICAR -->
         <div x-show="activeTab === 'publicar'" class="max-w-4xl mx-auto space-y-6 pb-20" x-cloak>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Nomenclatura + preview del nombre -->
                 <div class="bg-card p-6 rounded-2xl space-y-6">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs">1</div>
                         <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Nomenclatura</h3>
                     </div>
                     <div class="space-y-4">
-                        <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Prefijo Curso</label><input type="text" x-model="courseSlug" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border-none"></div>
-                        <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Número Clase</label><input type="number" x-model="claseNum" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border-none"></div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Prefijo Curso</label>
+                            <input type="text" x-model="courseSlug" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border-none">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Número Clase</label>
+                            <input type="number" x-model="claseNum" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border-none">
+                        </div>
                         <div class="pt-2 space-y-3 border-t border-white/5">
                             <label class="flex items-center gap-3 cursor-pointer group">
                                 <input type="checkbox" x-model="config.show_credits" class="w-4 h-4 rounded border-white/10 bg-white/5 text-zorro-blue focus:ring-zorro-blue">
@@ -166,38 +176,30 @@
                             </label>
                         </div>
                     </div>
+
+                    <!-- Preview del nombre de archivo -->
+                    <div class="bg-black/40 border border-zorro-blue/20 rounded-xl p-4 space-y-1">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-white/30">Nombre del archivo final</p>
+                        <p class="font-mono text-base font-bold text-zorro-blue" x-text="`${courseSlug}_Clase${claseNum}.html`"></p>
+                    </div>
                 </div>
 
-                <!-- PARTE 2: TRANSCRIPCIÓN -->
+                <!-- Descargar / Publicar -->
                 <div class="bg-card p-6 rounded-2xl space-y-6">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-zorro-blue text-white flex items-center justify-center font-bold text-xs">2</div>
-                        <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Transcripción</h3>
+                        <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Apuntes</h3>
                     </div>
-                    <p class="text-[10px] text-white/30 leading-relaxed uppercase font-bold tracking-tighter">Versión cruda con buscador y marcas de tiempo ocultas (hover).</p>
+                    <p class="text-[10px] text-white/30 leading-relaxed uppercase font-bold tracking-tighter">Transcripción formateada con buscador y marcas de tiempo interactivas.</p>
                     <div class="space-y-2 pt-4">
-                        <button @click="saveLocal('transcripcion')" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all">Descargar HTML</button>
-                        <button @click="publishToWordpress('transcripcion')" :disabled="publishing" class="w-full bg-white text-black py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-zorro-blue hover:text-white transition-all disabled:opacity-50">Subir a WP</button>
+                        <button @click="saveLocal()" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all">Descargar HTML</button>
+                        <button @click="publishToWordpress()" :disabled="publishing" class="w-full bg-white text-black py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-zorro-blue hover:text-white transition-all disabled:opacity-50">Subir a WP</button>
                     </div>
-                    <p class="text-[9px] font-mono text-center opacity-40" x-text="`${courseSlug}_Clase${claseNum}.html`"></p>
                 </div>
 
-                <!-- PARTE 3: APUNTES -->
-                <div class="bg-card p-6 rounded-2xl space-y-6">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-zorro-blue text-white flex items-center justify-center font-bold text-xs">3</div>
-                        <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Apuntes (IA)</h3>
-                    </div>
-                    <p class="text-[10px] text-white/30 leading-relaxed uppercase font-bold tracking-tighter">Versión procesada por Gemma 4 con estructura y formato académico.</p>
-                    <div class="space-y-2 pt-4">
-                        <button @click="saveLocal('apuntes')" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all">Descargar HTML</button>
-                        <button @click="publishToWordpress('apuntes')" :disabled="publishing" class="w-full bg-zorro-blue text-white py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Subir a WP</button>
-                    </div>
-                    <p class="text-[9px] font-mono text-center opacity-40" x-text="`${courseSlug}_Clase${claseNum}_Apuntes.html`"></p>
-                </div>
             </div>
         </div>
-   </div>
+
     </main>
 
     <!-- Modal de Configuración -->
@@ -212,7 +214,7 @@
                 <button @click="showConfig = false" class="text-white/40 hover:text-white transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div class="flex-1 overflow-y-auto p-8">
                 <!-- Tab: WordPress -->
                 <div x-show="configTab === 'wp'" class="space-y-6">
                     <div class="grid grid-cols-1 gap-6">
