@@ -141,9 +141,10 @@
                 <button @click="activeTab = 'publicar'" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all">Publicar</button>
             </div>
 
-            <!-- Preview centrado -->
-            <div class="bg-white rounded-2xl overflow-hidden shadow-lg w-full" style="height: 65vh">
-                <iframe :srcdoc="previewHtml" class="w-full h-full border-none"></iframe>
+            <!-- Preview centrado, auto-ajusta altura al contenido -->
+            <div class="bg-white rounded-2xl overflow-hidden shadow-lg w-full">
+                <iframe :srcdoc="previewHtml" class="w-full border-none block"
+                    @load="$el.style.height = ($el.contentWindow.document.documentElement.scrollHeight || $el.contentWindow.document.body.scrollHeight) + 'px'"></iframe>
             </div>
 
             <!-- Editor de código debajo -->
