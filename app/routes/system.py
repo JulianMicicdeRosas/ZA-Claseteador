@@ -48,7 +48,7 @@ async def system_check():
         "python": {"ok": True, "version": python_version},
         "whisper": {"ok": whisper_ok, "version": whisper_version},
         "ollama": {"ok": ollama_ok, "running": ollama_ok},
-        "gemma": {"ok": ollama_ok, "model": "gemma4:latest"}, # Using Gemma 2 9B (gemma4)
+        "modelo": {"ok": ollama_ok, "model": "qwen2.5:0.5b"},
         "gpu": {"ok": gpu_type != "cpu", "type": gpu_type},
         "ready": whisper_ok and ollama_ok
     }

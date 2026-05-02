@@ -57,10 +57,9 @@ def bootstrap():
         run_command(["uv", "pip", "install", "-r", "pyproject.toml"])
 
     print("Checking Ollama...")
-    # Attempt to pull gemma:4b is optional here or in the app. Let's do it here to ensure readiness.
     try:
-        print("Pulling Gemma 4 (this might take a while if not present)...")
-        subprocess.run(["ollama", "pull", "gemma4:latest"], check=False) 
+        print("Pulling qwen2.5:0.5b (this might take a while if not present)...")
+        subprocess.run(["ollama", "pull", "qwen2.5:0.5b"], check=False)
     except:
         print("Ollama not found or not running. Please ensure Ollama is installed.")
 
@@ -68,7 +67,7 @@ def bootstrap():
     print("\u2713 Entorno virtual creado")
     print("\u2713 Whisper instalado")
     print("\u2713 Ollama detectado")
-    print("\u2713 Gemma disponible")
+    print("\u2713 Modelo disponible")
     print("--- Launching App ---")
     
     # Launch uvicorn
