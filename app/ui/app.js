@@ -387,6 +387,9 @@ function app() {
             try {
                 const filename = `${this.courseSlug}_Clase${this.claseNum}.html`;
                 const htmlToPublish = await this.renderHtmlForType();
+                const videoUrl = this.videoInfo?.video_id
+                    ? `https://www.youtube.com/watch?v=${this.videoInfo.video_id}`
+                    : null;
 
                 const resp = await fetch('/api/publish-wordpress', {
                     method: 'POST',
@@ -394,6 +397,8 @@ function app() {
                     body: JSON.stringify({
                         html: htmlToPublish,
                         filename: filename,
+                        clase_num: this.claseNum,
+                        video_url: videoUrl,
                         wp_config: {
                             url: this.config.wp_url,
                             user: this.config.wp_user,
@@ -409,7 +414,14 @@ function app() {
 
                 const data = await resp.json();
                 this.publishUrl = data.url;
-                alert(`¡Publicado con éxito!\nURL: ${data.url}`);
+
+                let msg = `¡Publicado con éxito!\nURL: ${data.url}`;
+                if (data.redirect?.status === 'ok') {
+                    msg += `\n\nRedirección creada:\nelzorroazul.studio/video-clase-${this.claseNum} → YouTube`;
+                } else if (data.redirect?.status === 'error') {
+                    msg += `\n\n⚠ La página se subió, pero no se pudo crear la redirección (¿está instalado el plugin Redirection?).`;
+                }
+                alert(msg);
             } catch (e) {
                 alert("Error al publicar en WordPress: " + e.message);
             } finally {
