@@ -19,6 +19,8 @@ function app() {
         formatting: false,
         codeChanged: false,
         articlesHtml: '',
+        previousArticlesHtml: '',
+        showingPrevious: false,
         transcriptionHtml: '',
         previewHtml: '',
         claseNum: 1,
@@ -41,6 +43,7 @@ function app() {
         systemStatus: {},
         publishing: false,
         publishUrl: '',
+        sessions: [],
 
         editors: {},
 
@@ -48,6 +51,9 @@ function app() {
             await this.loadConfig();
             await this.loadPrompt();
             await this.loadSystemStatus();
+            try {
+                this.sessions = JSON.parse(localStorage.getItem('zorroazul_sessions') || '[]');
+            } catch(e) { this.sessions = []; }
             this.$watch('configTab', () => this.initEditors());
             this.$watch('activeTab', (val) => { if (val === 'formato') this.initEditors(); });
             this.$watch('showConfig', (val) => { if (val) this.initEditors(); });
@@ -200,7 +206,6 @@ function app() {
             }
         },
 
-        // Estimate how long formatting would take based on word count (2 min per 2500-word chunk)
         estimateFormatTime() {
             if (!this.transcriptionText) return '';
             const words = this.transcriptionText.split(/\s+/).filter(w => w).length;
@@ -239,8 +244,14 @@ function app() {
                             return true;
                         }
                         if (data.status === 'completado') {
+                            // Guardar versión anterior antes de sobreescribir
+                            if (this.articlesHtml) {
+                                this.previousArticlesHtml = this.articlesHtml;
+                                this.showingPrevious = false;
+                            }
                             this.articlesHtml = data.articles_html;
                             this.generateTranscriptionHtml();
+                            this.saveSession();
                             this.activeTab = 'formato';
                             await this.renderPreview();
                             this.initEditors();
@@ -269,7 +280,7 @@ function app() {
                 if (buffer) await processLine(buffer);
 
             } catch (e) {
-                alert("Error en Gemma: " + e.message);
+                alert("Error al formatear: " + e.message);
                 this.formatting = false;
             }
         },
@@ -285,6 +296,67 @@ function app() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         },
+
+        // ── Historial de sesiones ──────────────────────────────
+
+        saveSession() {
+            const session = {
+                id: Date.now(),
+                videoTitle: this.videoInfo?.title || 'Sin título',
+                videoId: this.videoInfo?.video_id || '',
+                claseNum: parseInt(this.claseNum) || 1,
+                courseSlug: this.courseSlug,
+                articlesHtml: this.articlesHtml,
+                createdAt: new Date().toISOString()
+            };
+            this.sessions.unshift(session);
+            if (this.sessions.length > 30) this.sessions = this.sessions.slice(0, 30);
+            try {
+                localStorage.setItem('zorroazul_sessions', JSON.stringify(this.sessions));
+            } catch(e) {
+                // Quota exceeded: quitar la más vieja e intentar de nuevo
+                this.sessions.pop();
+                try { localStorage.setItem('zorroazul_sessions', JSON.stringify(this.sessions)); } catch(_) {}
+            }
+        },
+
+        deleteSession(id) {
+            this.sessions = this.sessions.filter(s => s.id !== id);
+            try { localStorage.setItem('zorroazul_sessions', JSON.stringify(this.sessions)); } catch(_) {}
+        },
+
+        loadSession(session) {
+            if (this.articlesHtml && this.articlesHtml !== session.articlesHtml) {
+                this.previousArticlesHtml = this.articlesHtml;
+            }
+            this.articlesHtml = session.articlesHtml;
+            this.claseNum = session.claseNum;
+            this.courseSlug = session.courseSlug;
+            this.showingPrevious = false;
+            this.codeChanged = false;
+            this.activeTab = 'formato';
+            this.$nextTick(async () => {
+                await this.renderPreview();
+                this.initEditors();
+            });
+        },
+
+        // ── Versión anterior ───────────────────────────────────
+
+        togglePreviousVersion() {
+            if (!this.previousArticlesHtml) return;
+            const temp = this.articlesHtml;
+            this.articlesHtml = this.previousArticlesHtml;
+            this.previousArticlesHtml = temp;
+            this.showingPrevious = !this.showingPrevious;
+            this.codeChanged = false;
+            this.$nextTick(async () => {
+                await this.renderPreview();
+                this.initEditors();
+            });
+        },
+
+        // ── Editor y preview ───────────────────────────────────
 
         async applyCodeChanges() {
             if (this.editors.articles) {
@@ -363,6 +435,8 @@ function app() {
             this.transcriptionHtml = html;
         },
 
+        // ── Publicar / Descargar ───────────────────────────────
+
         async saveLocal() {
             const filename = `${this.courseSlug}_Clase${this.claseNum}.html`;
             const htmlToSave = await this.renderHtmlForType();
@@ -414,7 +488,7 @@ function app() {
                 if (data.redirect?.status === 'ok') {
                     msg += `\n\nRedirección creada:\nelzorroazul.studio/video-clase-${this.claseNum} → YouTube`;
                 } else if (data.redirect?.status === 'error') {
-                    msg += `\n\n⚠ La página se subió, pero no se pudo crear la redirección (¿está instalado el plugin Redirection?).`;
+                    msg += `\n\n⚠ La página se subió, pero no se pudo crear la redirección.`;
                 }
                 alert(msg);
             } catch (e) {

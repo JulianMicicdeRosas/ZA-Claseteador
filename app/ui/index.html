@@ -36,12 +36,13 @@
             animation: shift 3s linear infinite;
         }
         @keyframes shift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-
         input, textarea, select { background-color: #1a1a1a !important; color: #fff !important; border: 1px solid #333 !important; }
         input:focus, textarea:focus { border-color: #0044FF !important; outline: none; }
     </style>
 </head>
 <body class="font-body antialiased text-gray-200" x-data="app()" x-init="init()">
+
+    <!-- NAV -->
     <nav class="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-4">
             <img src="https://elzorroazul.studio/wp-content/uploads/2026/04/logo-sin-fondo.png" alt="Zorro Azul" class="h-8">
@@ -55,7 +56,13 @@
                     x-text="tab.label"></button>
             </template>
         </div>
-        <button @click="showConfig = true" class="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+        <div class="flex items-center gap-3">
+            <!-- Nombre del modelo activo -->
+            <span class="hidden md:block font-mono text-[10px] text-white/30 bg-white/5 px-2 py-1 rounded" x-text="config.model_name"></span>
+            <button @click="showConfig = true" class="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            </button>
+        </div>
     </nav>
 
     <main class="max-w-6xl mx-auto p-8">
@@ -68,9 +75,8 @@
                     <input type="text" x-model="ytUrl" placeholder="Link de YouTube (Requerido para referencias)" class="flex-1 px-8 py-4 outline-none text-lg bg-transparent border-none">
                     <button @click="analyzeVideo()" :disabled="loading || (!ytUrl && !localFile)" class="bg-zorro-blue text-white px-8 py-4 font-headline font-bold uppercase hover:bg-white hover:text-black transition-all disabled:opacity-50 text-xs tracking-widest">Analizar</button>
                 </div>
-
                 <div class="flex flex-col items-center gap-2 w-full max-w-2xl">
-                    <p class="text-[10px] font-bold uppercase tracking-widest text-white/30">Opcional: Cargar video local (para ahorrar descarga)</p>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-white/30">Opcional: Cargar video local</p>
                     <label class="w-full flex flex-col items-center px-4 py-6 bg-white/5 text-white/60 rounded-2xl border-2 border-dashed border-white/10 cursor-pointer hover:bg-white/10 transition-all">
                         <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
                         <span class="text-xs font-bold uppercase tracking-widest" x-text="localFile ? localFile.name : 'Seleccionar Video o Audio'"></span>
@@ -96,7 +102,7 @@
             </template>
         </div>
 
-        <!-- APUNTES (antes: Transcripción) -->
+        <!-- APUNTES (transcripcion) -->
         <div x-show="activeTab === 'transcripcion'" class="h-[calc(100vh-200px)] flex flex-col gap-6" x-cloak x-data="{ showPrompt: false }">
             <div class="flex justify-between items-center flex-wrap gap-3">
                 <h2 class="font-headline text-2xl font-bold uppercase">Apuntes</h2>
@@ -106,13 +112,12 @@
                     </template>
                     <button @click="downloadTxt()" :disabled="!transcriptionText" class="border border-white/20 text-white/60 px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all disabled:opacity-50">Descargar TXT</button>
                     <button @click="showPrompt = !showPrompt" class="border border-white/20 text-white/60 px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all">Refinar Prompt</button>
-                    <button @click="formatWithGemma()" :disabled="!transcriptionText" class="bg-zorro-blue text-white px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Dar Formato</button>
+                    <button @click="formatWithGemma()" :disabled="!transcriptionText || formatting" class="bg-zorro-blue text-white px-5 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-50">Dar Formato</button>
                 </div>
             </div>
 
-            <!-- Quick Prompt Editor -->
             <div x-show="showPrompt" class="bg-card p-6 rounded-2xl border border-zorro-blue/30 space-y-4">
-                <p class="text-[10px] font-bold uppercase tracking-widest text-zorro-blue">Instrucciones para la IA (Podés editarlas antes de darle formato)</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-zorro-blue">Instrucciones para la IA</p>
                 <textarea x-model="promptText" @input.debounce.500ms="savePrompt()" class="w-full h-40 bg-black/40 p-4 font-mono text-xs rounded-xl outline-none resize-none border border-white/10 focus:border-zorro-blue"></textarea>
             </div>
 
@@ -128,7 +133,7 @@
                             <div class="h-full gradient-shift transition-all duration-500" :style="`width: ${progress}%`"></div>
                         </div>
                         <p class="font-headline font-bold uppercase text-zorro-blue" x-text="statusText"></p>
-                        <p class="text-[10px] text-white/40 uppercase tracking-widest">(Esto puede tardar varios minutos si la clase es larga)</p>
+                        <p class="text-[10px] text-white/40 uppercase tracking-widest">(Puede tardar varios minutos en clases largas)</p>
                     </div>
                 </div>
             </div>
@@ -136,9 +141,26 @@
 
         <!-- RESULTADO FINAL -->
         <div x-show="activeTab === 'formato'" class="flex flex-col gap-6 pb-8" x-cloak>
-            <div class="flex justify-between items-center">
-                <h2 class="font-headline text-2xl font-bold uppercase tracking-tight">Resultado Final</h2>
-                <button @click="activeTab = 'publicar'" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all">Publicar</button>
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="font-headline text-2xl font-bold uppercase tracking-tight">Resultado Final</h2>
+                    <!-- Indicador versión anterior -->
+                    <span x-show="showingPrevious" class="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-1 rounded">Versión Anterior</span>
+                </div>
+                <div class="flex gap-3 items-center flex-wrap">
+                    <!-- Versión anterior -->
+                    <button x-show="previousArticlesHtml" @click="togglePreviousVersion()"
+                        class="border px-4 py-1.5 rounded-lg font-headline font-bold uppercase text-[10px] transition-all"
+                        :class="showingPrevious ? 'border-amber-400 text-amber-400 bg-amber-400/10' : 'border-white/20 text-white/40 hover:bg-white/5'">
+                        <span x-text="showingPrevious ? 'Ver versión actual' : 'Ver versión anterior'"></span>
+                    </button>
+                    <!-- Re-formatear -->
+                    <button x-show="transcriptionText" @click="formatWithGemma()" :disabled="formatting"
+                        class="border border-white/20 text-white/40 px-4 py-1.5 rounded-lg font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all disabled:opacity-30">
+                        Re-formatear
+                    </button>
+                    <button @click="activeTab = 'publicar'" class="bg-zorro-blue text-white px-6 py-2 rounded-lg font-headline font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-all">Publicar</button>
+                </div>
             </div>
 
             <!-- Preview centrado, auto-ajusta altura al contenido -->
@@ -147,7 +169,7 @@
                     @load="$el.style.height = ($el.contentWindow.document.documentElement.scrollHeight || $el.contentWindow.document.body.scrollHeight) + 'px'"></iframe>
             </div>
 
-            <!-- Editor de código debajo -->
+            <!-- Editor de código -->
             <div class="bg-card rounded-2xl overflow-hidden flex flex-col">
                 <div class="flex justify-between items-center px-5 py-3 border-b border-white/5">
                     <span class="text-[10px] font-bold uppercase tracking-widest text-white/30">Código HTML</span>
@@ -164,7 +186,7 @@
         <div x-show="activeTab === 'publicar'" class="max-w-4xl mx-auto space-y-6 pb-20" x-cloak>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <!-- Nomenclatura + preview del nombre -->
+                <!-- Nomenclatura -->
                 <div class="bg-card p-6 rounded-2xl space-y-6">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs">1</div>
@@ -186,8 +208,7 @@
                             </label>
                         </div>
                     </div>
-
-                    <!-- Preview del nombre de archivo -->
+                    <!-- Preview nombre de archivo -->
                     <div class="bg-black/40 border border-zorro-blue/20 rounded-xl p-4 space-y-1">
                         <p class="text-[9px] font-bold uppercase tracking-widest text-white/30">Nombre del archivo final</p>
                         <p class="font-mono text-base font-bold text-zorro-blue" x-text="`${courseSlug}_Clase${claseNum}.html`"></p>
@@ -202,12 +223,42 @@
                     </div>
                     <p class="text-[10px] text-white/30 leading-relaxed uppercase font-bold tracking-tighter">Transcripción formateada con buscador y marcas de tiempo interactivas.</p>
                     <div class="space-y-2 pt-4">
-                        <button @click="saveLocal()" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all">Descargar HTML</button>
-                        <button @click="publishToWordpress()" :disabled="publishing" class="w-full bg-white text-black py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-zorro-blue hover:text-white transition-all disabled:opacity-50">Subir a WP</button>
+                        <button @click="saveLocal()" :disabled="!articlesHtml" class="w-full border border-white/10 py-3 rounded-xl font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all disabled:opacity-30">Descargar HTML</button>
+                        <button @click="publishToWordpress()" :disabled="publishing || !articlesHtml" class="w-full bg-white text-black py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest hover:bg-zorro-blue hover:text-white transition-all disabled:opacity-30">
+                            <span x-text="publishing ? 'Publicando...' : 'Subir a WP'"></span>
+                        </button>
                     </div>
                 </div>
 
             </div>
+
+            <!-- HISTORIAL DE SESIONES -->
+            <div x-show="sessions.length > 0" class="bg-card rounded-2xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center">
+                    <h3 class="font-headline font-bold uppercase text-sm tracking-widest">Historial</h3>
+                    <span class="text-[10px] font-mono text-white/30" x-text="`${sessions.length} resultado${sessions.length !== 1 ? 's' : ''} guardado${sessions.length !== 1 ? 's' : ''}`"></span>
+                </div>
+                <div class="divide-y divide-white/5">
+                    <template x-for="session in sessions" :key="session.id">
+                        <div class="px-6 py-4 flex items-center gap-4 hover:bg-white/5 transition-all">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-headline font-bold text-sm truncate" x-text="session.videoTitle"></p>
+                                <p class="text-[10px] text-white/30 font-mono mt-0.5"
+                                   x-text="`${session.courseSlug}_Clase${session.claseNum} · ${new Date(session.createdAt).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}`"></p>
+                            </div>
+                            <button @click="loadSession(session)"
+                                class="border border-white/20 text-white/60 px-4 py-1.5 rounded-lg font-headline font-bold uppercase text-[10px] hover:bg-white/5 transition-all whitespace-nowrap">
+                                Cargar
+                            </button>
+                            <button @click="deleteSession(session.id)"
+                                class="text-red-400/50 hover:text-red-400 px-2 py-1.5 rounded-lg transition-all text-[10px] font-bold uppercase whitespace-nowrap">
+                                Borrar
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
         </div>
 
     </main>
@@ -221,11 +272,11 @@
                     <button @click="configTab = 'prompt'" class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all" :class="configTab === 'prompt' ? 'bg-white text-black shadow-sm' : 'text-white/40'">Prompt (IA)</button>
                     <button @click="configTab = 'modelo'" class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all" :class="configTab === 'modelo' ? 'bg-white text-black shadow-sm' : 'text-white/40'">Modelo</button>
                 </div>
-                <button @click="showConfig = false" class="text-white/40 hover:text-white transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+                <button @click="showConfig = false" class="text-white/40 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                </button>
             </div>
-
             <div class="flex-1 overflow-y-auto p-8">
-                <!-- Tab: WordPress -->
                 <div x-show="configTab === 'wp'" class="space-y-6">
                     <div class="grid grid-cols-1 gap-6">
                         <div class="space-y-2"><label class="text-[10px] font-bold uppercase tracking-widest text-white/30">URL de WordPress</label><input type="text" x-model="config.wp_url" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border border-transparent focus:border-zorro-blue outline-none transition-all"></div>
@@ -242,30 +293,44 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Tab: Prompt -->
                 <div x-show="configTab === 'prompt'" class="h-[400px] flex flex-col gap-4">
                     <p class="text-[10px] font-bold uppercase tracking-widest text-white/30">Instrucciones para la IA</p>
                     <div class="flex-1 bg-black/40 rounded-2xl overflow-hidden border border-white/10">
                         <textarea x-model="promptText" class="w-full h-full p-6 font-mono text-xs outline-none bg-transparent resize-none leading-relaxed text-white/80"></textarea>
                     </div>
                 </div>
-
-                <!-- Tab: Modelo -->
                 <div x-show="configTab === 'modelo'" class="space-y-6">
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold uppercase tracking-widest text-white/30">Nombre del Modelo en Ollama</label>
                         <input type="text" x-model="config.model_name" class="w-full px-4 py-3 bg-white/5 rounded-xl font-bold border border-transparent focus:border-zorro-blue outline-none transition-all">
-                        <p class="text-[10px] text-white/30 italic mt-2">Por defecto: gemma4:latest. Asegurate de que esté en 'ollama list'.</p>
+                        <p class="text-[10px] text-white/30 italic mt-2">Verificá el nombre exacto con <code class="bg-white/10 px-1 rounded">ollama list</code> en la terminal.</p>
+                    </div>
+                    <!-- Estado del sistema -->
+                    <div class="border-t border-white/5 pt-6 space-y-3">
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-white/30">Estado del Sistema</h4>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                            <div class="flex items-center gap-2">
+                                <span :class="systemStatus.whisper?.ok ? 'text-green-400' : 'text-red-400'">●</span>
+                                <span class="text-white/50">Whisper</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span :class="systemStatus.ollama?.ok ? 'text-green-400' : 'text-red-400'">●</span>
+                                <span class="text-white/50">Ollama</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span :class="systemStatus.gpu?.ok ? 'text-green-400' : 'text-amber-400'">●</span>
+                                <span class="text-white/50" x-text="`GPU: ${systemStatus.gpu?.type || 'cpu'}`"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
             <div class="p-6 bg-white/5 border-t border-white/5 flex justify-end gap-4">
                 <button @click="saveConfig()" class="bg-zorro-blue text-white px-8 py-3 rounded-xl font-headline font-bold uppercase text-[10px] tracking-widest shadow-lg hover:bg-white hover:text-black transition-all">Guardar Configuración</button>
             </div>
         </div>
     </div>
+
     <script src="/static/app.js"></script>
 </body>
 </html>
